@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <iostream>
 
 #include <dbus/dbus.h>
@@ -14,9 +15,10 @@ int main() {
 	{ 
 		fprintf(stderr, "Connection Error (%s)\n", err.message); 
 		dbus_error_free(&err); 
+		exit(EXIT_FAILURE);
 	}
 
-	if (nullptr == conn) exit(1);
+	if (nullptr == conn) exit(EXIT_FAILURE);
 
 	std::cout << "It should work well!\n";
 }
