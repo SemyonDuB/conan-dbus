@@ -3,7 +3,6 @@ from conans import ConanFile, CMake, tools
 
 class DbusConan(ConanFile):
     name = "dbus"
-    version = "1.12"
     license = "AFL-2.1-or-later"
     url = ""
     homepage = "https://www.freedesktop.org/wiki/Software/dbus"
@@ -11,8 +10,9 @@ class DbusConan(ConanFile):
     topics = ("conan", "dbus")
     settings = "os", "compiler", "build_type", "arch"
 
+    cmake_FindGlib2 = None
+
     options = {
-            "shared": [True, False],
             "with_x11": [True, False], 
             "with_glib": [True, False],
             "disable_assert": [True, False],
@@ -23,11 +23,9 @@ class DbusConan(ConanFile):
             "enable_verbose_mode": [True, False],
             "gcov_enabled": [True, False],
             "install_system_libs": [True, False],
-            "use_output_debug_string": [True, False],
-            "use_wine": [True, False]}
+            "use_output_debug_string": [True, False]}
 
     default_options = {
-            "shared": False,
             "with_x11": False,
             "with_glib": False,
             "disable_assert": False,
@@ -38,31 +36,48 @@ class DbusConan(ConanFile):
             "enable_verbose_mode": True,
             "gcov_enabled": False,
             "install_system_libs": False,
-            "use_output_debug_string": False,
-            "use_wine": False}
+            "use_output_debug_string": False}
 
     generators = "cmake_find_package"
 
+
     def source(self):
-        self.run("git clone https://gitlab.freedesktop.org/dbus/dbus")
+
+        tools.get(**self.conan_data["sources"][self.version])
+
+        dbus_cmake = tools.os.path.join("dbus-" + self.version, "cmake", "CMakeLists.txt")
+        dbus_cmake_tools = tools.os.path.join("dbus-" + self.version, "cmake", 
+                "tools", "CMakeLists.txt")
+
+        if self.options.with_glib:
+            tools.replace_in_file(dbus_cmake, "GLib2", "glib")
+            tools.replace_in_file(dbus_cmake, "GLIB2", "GLIB")
+
+        if self.options.with_x11:
+            tools.replace_in_file(dbus_cmake, "X11", "libx11")
+            tools.replace_in_file(dbus_cmake_tools, "X11", "libx11")
+
 
     def requirements(self):
+
+        self.requires("expat/2.2.9")
+
         if self.options.with_glib:
             self.requires("glib/2.64.0@bincrafters/stable")
 
         if self.options.with_x11:
             self.requires("libx11/1.6.8@bincrafters/stable")
+            self.requires("libxext/1.3.4@bincrafters/stable")
             self.requires("libxrandr/1.5.2@bincrafters/stable")
             self.requires("libxrender/0.9.10@bincrafters/stable")
-            self.requires("libx11/1.6.8@bincrafters/stable")
             self.requires("libxi/1.7.10@bincrafters/stable")
-            self.requires("libxext/1.3.4@bincrafters/stable")
             self.requires("libxcursor/1.2.0@bincrafters/stable")
             self.requires("libxdamage/1.1.5@bincrafters/stable")
             self.requires("libxfixes/5.0.3@bincrafters/stable")
             self.requires("libxcomposite/0.4.5@bincrafters/stable")
             self.requires("libxinerama/1.1.4@bincrafters/stable")
             self.requires("fontconfig/2.13.91@conan/stable")
+
 
     def configure_cmake(self):
         cmake = CMake(self)
@@ -104,16 +119,15 @@ class DbusConan(ConanFile):
         if self.options.use_output_debug_string == True:
             cmake.definitions["DBUS_USE_OUTPUT_DEBUG_STRING"] = "ON"
 
-        if self.options.use_wine == True:
-            cmake.definitions["DBUS_USE_WINE"] = "ON"
-
-        cmake.configure(source_folder="dbus")
+        cmake.configure(source_folder="dbus-{}/cmake".format(self.version))
         
         return cmake
+
 
     def build(self):
         cmake = self.configure_cmake()
         cmake.build()
+
 
     def package(self):
         cmake = self.configure_cmake()
