@@ -10,8 +10,6 @@ class DbusConan(ConanFile):
     topics = ("conan", "dbus")
     settings = "os", "compiler", "build_type", "arch"
 
-    cmake_FindGlib2 = None
-
     options = {
             "with_x11": [True, False], 
             "with_glib": [True, False],
