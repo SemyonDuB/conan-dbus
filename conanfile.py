@@ -64,17 +64,7 @@ class DbusConan(ConanFile):
             self.requires("glib/2.64.0@bincrafters/stable")
 
         if self.options.with_x11:
-            self.requires("libx11/1.6.8@bincrafters/stable")
-            self.requires("libxext/1.3.4@bincrafters/stable")
-            self.requires("libxrandr/1.5.2@bincrafters/stable")
-            self.requires("libxrender/0.9.10@bincrafters/stable")
-            self.requires("libxi/1.7.10@bincrafters/stable")
-            self.requires("libxcursor/1.2.0@bincrafters/stable")
-            self.requires("libxdamage/1.1.5@bincrafters/stable")
-            self.requires("libxfixes/5.0.3@bincrafters/stable")
-            self.requires("libxcomposite/0.4.5@bincrafters/stable")
-            self.requires("libxinerama/1.1.4@bincrafters/stable")
-            self.requires("fontconfig/2.13.91@conan/stable")
+            self.requires("xorg/system")
 
 
     def configure_cmake(self):
