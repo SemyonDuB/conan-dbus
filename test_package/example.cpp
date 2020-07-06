@@ -20,5 +20,5 @@ int main() {
 
 	if (nullptr == conn) exit(EXIT_FAILURE);
 
-	std::cout << "It should work well!\n";
+	std::cout << "D-Bus is should work!\n";
 }

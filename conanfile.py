@@ -1,9 +1,10 @@
-from conans import ConanFile, CMake, tools
+from conans import CMake, ConanFile, tools
+import os
 
 
 class DbusConan(ConanFile):
     name = "dbus"
-    license = "AFL-2.1-or-later"
+    license = "AFL-2.1"
     url = ""
     homepage = "https://www.freedesktop.org/wiki/Software/dbus"
     description = "D-Bus is a simple system for interprocess communication and coordination."
@@ -36,15 +37,24 @@ class DbusConan(ConanFile):
             "install_system_libs": False,
             "use_output_debug_string": False}
 
-    generators = "cmake_find_package"
+    generators = "cmake_find_package", "cmake_paths"
 
+    _source_subfolder = "source_subfolder"
+    _build_subfolder = "build_subfolder"
+    _cmake = None
+
+    requires = (
+            "expat/2.2.9"
+            )
 
     def source(self):
 
         tools.get(**self.conan_data["sources"][self.version])
+        extracted_dir = self.name + "-" + self.version
+        os.rename(extracted_dir, self._source_subfolder)
 
-        dbus_cmake = tools.os.path.join("dbus-" + self.version, "cmake", "CMakeLists.txt")
-        dbus_cmake_tools = tools.os.path.join("dbus-" + self.version, "cmake", 
+        dbus_cmake = tools.os.path.join(self._source_subfolder, "cmake", "CMakeLists.txt")
+        dbus_cmake_tools = tools.os.path.join(self._source_subfolder, "cmake", 
                 "tools", "CMakeLists.txt")
 
         if self.options.with_glib:
@@ -57,67 +67,49 @@ class DbusConan(ConanFile):
 
 
     def requirements(self):
-
-        self.requires("expat/2.2.9")
-
         if self.options.with_glib:
-            self.requires("glib/2.64.0@bincrafters/stable")
+            self.requires("glib/2.65.0")
 
         if self.options.with_x11:
             self.requires("xorg/system")
 
 
-    def configure_cmake(self):
-        cmake = CMake(self)
+    def _configure_cmake(self):
+        if not self._cmake:
+            self._cmake = CMake(self)
 
-        cmake.definitions["DBUS_BUILD_TESTS"] = "OFF"
-        cmake.definitions["DBUS_ENABLE_DOXYGEN_DOCS"] = "OFF"
-        cmake.definitions["DBUS_ENABLE_XML_DOCS"] = "OFF"
+            self._cmake.definitions["DBUS_BUILD_TESTS"] = "OFF"
+            self._cmake.definitions["DBUS_ENABLE_DOXYGEN_DOCS"] = "OFF"
+            self._cmake.definitions["DBUS_ENABLE_XML_DOCS"] = "OFF"
 
-        if self.options.with_x11 == True:
-            cmake.definitions["DBUS_BUILD_X11"] = "ON"
+            self._cmake.definitions["DBUS_BUILD_X11"] = self.options.with_x11
+            self._cmake.definitions["DBUS_WITH_GLIB"] = self.options.with_glib
+            self._cmake.definitions["DBUS_DISABLE_ASSERT"] = self.options.disable_assert
+            self._cmake.definitions["DBUS_DISABLE_CHECKS"] = self.options.disable_checks
+            self._cmake.definitions["DBUS_ENABLE_ANSI"] = self.options.enable_ansi
+            self._cmake.definitions["DBUS_ENABLE_CONTAINERS"] = self.options.enable_containers
+            self._cmake.definitions["DBUS_ENABLE_STATS"] = self.options.enable_stats
+            self._cmake.definitions["DBUS_ENABLE_VERBOSE_MODE"] = self.options.enable_verbose_mode
+            self._cmake.definitions["DBUS_GCOV_ENABLED"] = self.options.gcov_enabled
+            self._cmake.definitions["DBUS_INSTALL_SYSTEM_LIBS"] = self.options.install_system_libs
+            self._cmake.definitions["DBUS_USE_OUTPUT_DEBUG_STRING"] = self.options.use_output_debug_string
 
-        if self.options.with_glib == True:
-            cmake.definitions["DBUS_WITH_GLIB"] = "ON"
-
-        if self.options.disable_assert == True:
-            cmake.definitions["DBUS_DISABLE_ASSERT"] = "ON"
-
-        if self.options.disable_checks == True:
-            cmake.definitions["DBUS_DISABLE_CHECKS"] = "ON"
-
-        if self.options.enable_ansi == True:
-            cmake.definitions["DBUS_ENABLE_ANSI"] = "ON"
-
-        if self.options.enable_containers == True:
-            cmake.definitions["DBUS_ENABLE_CONTAINERS"] = "ON"
-
-        if self.options.enable_stats == True:
-            cmake.definitions["DBUS_ENABLE_STATS"] = "ON"
-
-        if self.options.enable_verbose_mode == False:
-            cmake.definitions["DBUS_ENABLE_VERBOSE_MODE"] = "OFF"
-
-        if self.options.gcov_enabled == True:
-            cmake.definitions["DBUS_GCOV_ENABLED"] = "ON"
-
-        if self.options.install_system_libs == True:
-            cmake.definitions["DBUS_INSTALL_SYSTEM_LIBS"] = "ON"
-
-        if self.options.use_output_debug_string == True:
-            cmake.definitions["DBUS_USE_OUTPUT_DEBUG_STRING"] = "ON"
-
-        cmake.configure(source_folder="dbus-{}/cmake".format(self.version))
+            path_to_cmakeLists = os.path.join(self._source_subfolder, "cmake")
+            
+            self._cmake.configure(source_folder=path_to_cmakeLists, 
+                    build_folder=self._build_subfolder)
         
-        return cmake
+        return self._cmake
 
 
     def build(self):
-        cmake = self.configure_cmake()
+        cmake = self._configure_cmake()
         cmake.build()
 
-
     def package(self):
-        cmake = self.configure_cmake()
+        self.copy(pattern="LICENSE", dst="licenses", src=self._source_subfolder)
+        cmake = self._configure_cmake()
         cmake.install()
 
+    def package_info(self):
+        self.cpp_info.libs = tools.collect_libs(self)
